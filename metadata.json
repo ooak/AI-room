@@ -1,0 +1,8 @@
+
+{
+  "name": "AI Room Makeover",
+  "description": "Upload or capture a photo of your room, describe your desired style, and let AI generate a stunning redesign with shoppable product recommendations.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

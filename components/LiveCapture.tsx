@@ -1,94 +1,83 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-import './LiveCapture.css';
-
-interface LiveCaptureProps {
+type LiveCaptureProps = {
   onImageReady: (dataUrl: string) => void;
-}
+};
 
-export const LiveCapture: React.FC<LiveCaptureProps> = ({ onImageReady }) => {
+const LiveCapture: React.FC<LiveCaptureProps> = ({ onImageReady }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [snapshot, setSnapshot] = useState<string | null>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
 
   useEffect(() => {
-    let activeStream: MediaStream | null = null;
+    let stream: MediaStream;
 
-    const startStream = async () => {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        setError('Camera access is not supported in this browser.');
-        return;
-      }
-
+    const enableCamera = async () => {
       try {
-        activeStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        const video = videoRef.current;
-        if (video) {
-          video.srcObject = activeStream;
-          await video.play();
-          setIsStreaming(true);
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+          setError(null);
         }
-      } catch (streamError) {
-        console.error(streamError);
-        setError('We could not start the camera. Please check your permissions.');
+      } catch (cameraError) {
+        console.error('Unable to access camera', cameraError);
+        setError('We could not access your camera. Check permissions and try again.');
       }
     };
 
-    void startStream();
+    enableCamera();
 
     return () => {
-      activeStream?.getTracks().forEach(track => track.stop());
+      stream?.getTracks().forEach(track => track.stop());
     };
   }, []);
 
   const handleCapture = () => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas) {
+    if (!videoRef.current || !canvasRef.current) {
+      setError('Camera is not ready yet.');
       return;
     }
 
-    const { videoWidth, videoHeight } = video;
-    canvas.width = videoWidth;
-    canvas.height = videoHeight;
+    const canvas = canvasRef.current;
     const context = canvas.getContext('2d');
     if (!context) {
-      setError('We could not take a snapshot.');
+      setError('Could not capture frame.');
       return;
     }
 
-    context.drawImage(video, 0, 0, videoWidth, videoHeight);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-    setSnapshot(dataUrl);
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg');
     onImageReady(dataUrl);
+    setIsCapturing(true);
   };
 
   return (
-    <div className="capture">
-      <h2 className="section-title">Capture a fresh photo</h2>
-      <p className="capture__hint">
-        Position your camera toward the room and make sure the frame is well lit before snapping a photo.
+    <div className="w-full max-w-xl mx-auto bg-white rounded-xl shadow p-6">
+      <h2 className="text-xl font-semibold text-gray-800">Capture a live photo</h2>
+      <p className="mt-2 text-sm text-gray-600">
+        Allow camera access and position your room within the frame, then capture a still image.
       </p>
-      <div className="capture__viewport">
-        {isStreaming ? (
-          <video ref={videoRef} playsInline muted />
-        ) : (
-          <div className="capture__placeholder">Waiting for camera…</div>
-        )}
-        <canvas ref={canvasRef} className="capture__canvas" aria-hidden />
+      <div className="mt-4 aspect-video bg-black rounded-lg overflow-hidden">
+        <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
       </div>
-      <button type="button" className="primary-button" onClick={handleCapture} disabled={!isStreaming}>
+      <button
+        type="button"
+        onClick={handleCapture}
+        className="mt-4 w-full bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition"
+      >
         Capture photo
       </button>
-      {error && <p className="error-message">{error}</p>}
-      {snapshot && (
-        <figure className="capture__preview">
-          <img src={snapshot} alt="Captured room" />
-          <figcaption>Snapshot saved. Next, describe your ideal makeover.</figcaption>
-        </figure>
+      {isCapturing && (
+        <p className="mt-3 text-sm text-indigo-600">Frame captured! You can proceed to describe your ideal style.</p>
       )}
+      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+      <canvas ref={canvasRef} className="hidden" />
     </div>
   );
 };
+
+export { LiveCapture };

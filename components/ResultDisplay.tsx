@@ -1,104 +1,78 @@
 import React from 'react';
+
 import type { Product, RoomDimensions } from '../types.ts';
 
-import './ResultDisplay.css';
-
-interface ResultDisplayProps {
+type ResultDisplayProps = {
   originalImage: string;
   redesignedImage: string;
   products: Product[];
   estimatedDimensions: RoomDimensions | null;
   onStartOver: () => void;
-}
+};
 
-export const ResultDisplay: React.FC<ResultDisplayProps> = ({
+const ResultDisplay: React.FC<ResultDisplayProps> = ({
   originalImage,
   redesignedImage,
   products,
   estimatedDimensions,
   onStartOver,
 }) => (
-  <div className="result">
-    <h2 className="section-title">Your redesigned space is ready</h2>
-    <p className="result__subtitle">
-      Explore the makeover and discover curated products that match the new aesthetic.
-    </p>
-    <div className="result__images">
-      <figure className="result__image-card">
-        <div className="result__image-wrapper">
-          <img src={originalImage} alt="Original room" />
-          <figcaption>Original photo</figcaption>
-          <div className="result__overlay" aria-hidden>
-            {products.map((product, index) => {
-              const width = (product.boundingBox.x_max - product.boundingBox.x_min) * 100;
-              const height = (product.boundingBox.y_max - product.boundingBox.y_min) * 100;
-              const left = product.boundingBox.x_min * 100;
-              const top = product.boundingBox.y_min * 100;
-              return (
-                <span
-                  key={product.name}
-                  className="result__tag"
-                  style={{ width: `${width}%`, height: `${height}%`, left: `${left}%`, top: `${top}%` }}
-                >
-                  {index + 1}
-                </span>
-              );
-            })}
-          </div>
-        </div>
+  <div className="w-full max-w-6xl mx-auto space-y-10">
+    <section className="grid gap-6 lg:grid-cols-2">
+      <figure className="bg-white rounded-xl shadow overflow-hidden">
+        <img src={originalImage} alt="Original room" className="w-full object-cover" />
+        <figcaption className="p-4 text-sm text-gray-600">Original room</figcaption>
       </figure>
-      <figure className="result__image-card">
-        <div className="result__image-wrapper">
-          <img src={redesignedImage} alt="Redesigned room" />
-          <figcaption>AI crafted makeover</figcaption>
-        </div>
+      <figure className="bg-white rounded-xl shadow overflow-hidden">
+        <img src={redesignedImage} alt="Redesigned room" className="w-full object-cover" />
+        <figcaption className="p-4 text-sm text-gray-600">AI redesigned vision</figcaption>
       </figure>
-    </div>
-
-    <section className="result__details" aria-label="Recommended products">
-      <h3>Shopping list</h3>
-      <ul className="result__products">
-        {products.map((product, index) => (
-          <li key={product.name} className="result__product">
-            <span className="result__product-index">{index + 1}</span>
-            <div className="result__product-body">
-              <h4>{product.name}</h4>
-              <p>{product.description}</p>
-              <div className="result__product-meta">
-                <span>{product.store}</span>
-                <span>{product.price}</span>
-              </div>
-              <a className="result__product-link" href={product.url} target="_blank" rel="noreferrer">
-                View product
-              </a>
-            </div>
-          </li>
-        ))}
-      </ul>
     </section>
 
     {estimatedDimensions && (
-      <section className="result__dimensions" aria-label="Estimated room dimensions">
-        <h3>Estimated room size</h3>
-        <dl>
-          <div>
-            <dt>Length</dt>
-            <dd>{estimatedDimensions.length.toFixed(1)} m</dd>
-          </div>
-          <div>
-            <dt>Width</dt>
-            <dd>{estimatedDimensions.width.toFixed(1)} m</dd>
-          </div>
-          <div>
-            <dt>Height</dt>
-            <dd>{estimatedDimensions.height.toFixed(1)} m</dd>
-          </div>
-        </dl>
+      <section className="bg-white rounded-xl shadow p-6">
+        <h2 className="text-lg font-semibold text-gray-800">Estimated room dimensions</h2>
+        <p className="mt-2 text-gray-600">
+          Approx. {estimatedDimensions.length} ft (L) × {estimatedDimensions.width} ft (W) × {estimatedDimensions.height} ft (H)
+        </p>
       </section>
     )}
 
-    <button type="button" className="secondary-button" onClick={onStartOver}>
-      Start over
-    </button>
+    <section className="bg-white rounded-xl shadow p-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-gray-800">Suggested products</h2>
+        <button
+          type="button"
+          onClick={onStartOver}
+          className="text-indigo-600 font-semibold hover:underline"
+        >
+          Start over
+        </button>
+      </div>
+      {products.length === 0 ? (
+        <p className="mt-4 text-gray-600">No product suggestions were generated. Try refining your prompt.</p>
+      ) : (
+        <ul className="mt-6 grid gap-4 md:grid-cols-2">
+          {products.map(product => (
+            <li key={product.url} className="border border-indigo-100 rounded-lg p-4">
+              <h3 className="text-base font-semibold text-gray-800">{product.name}</h3>
+              <p className="mt-1 text-sm text-gray-600">{product.description}</p>
+              <p className="mt-2 text-sm text-gray-500">{product.store}</p>
+              <p className="mt-1 text-indigo-600 font-medium">{product.price}</p>
+              <a
+                href={product.url}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-block text-sm font-medium text-indigo-600 hover:underline"
+              >
+                View product
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   </div>
 );
+
+export { ResultDisplay };

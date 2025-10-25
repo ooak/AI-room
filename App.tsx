@@ -1,17 +1,18 @@
 import React, { useState, useCallback } from 'react';
-import { Header } from './components/Header';
-import { InputSelector } from './components/InputSelector';
-import { FileUpload } from './components/FileUpload';
-import { LiveCapture } from './components/LiveCapture';
-import { ResultDisplay } from './components/ResultDisplay';
-import { Loader } from './components/Loader';
-import { redesignRoomAndFindProducts } from './services/geminiService';
-import type { AppState, InputMode, Product } from './types';
-import { CameraIcon, UploadIcon } from './components/IconComponents';
+import './App.css';
+import { Header } from './components/Header.tsx';
+import { InputSelector } from './components/InputSelector.tsx';
+import { FileUpload } from './components/FileUpload.tsx';
+import { LiveCapture } from './components/LiveCapture.tsx';
+import { ResultDisplay } from './components/ResultDisplay.tsx';
+import { Loader } from './components/Loader.tsx';
+import { redesignRoomAndFindProducts } from './services/geminiService.ts';
+import type { AppState, InputMode } from './types.ts';
 
 const App: React.FC = () => {
   const [appState, setAppState] = useState<AppState>({
     step: 'SELECT_MODE',
+    inputMode: undefined,
     prompt: '',
     originalImage: null,
     redesignedImage: null,
@@ -22,31 +23,33 @@ const App: React.FC = () => {
   });
 
   const handleModeSelect = (mode: InputMode) => {
-    setAppState(prev => ({ ...prev, step: 'PROVIDE_INPUT', inputMode: mode }));
-  };
-  
-  const handleImageReady = (imageDataUrl: string) => {
-    setAppState(prev => ({ ...prev, step: 'PROVIDE_PROMPT', originalImage: imageDataUrl }));
+    setAppState(prev => ({ ...prev, step: 'PROVIDE_INPUT', inputMode: mode, error: null }));
   };
 
-  const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setAppState(prev => ({ ...prev, prompt: e.target.value }));
+  const handleImageReady = (imageDataUrl: string) => {
+    setAppState(prev => ({ ...prev, step: 'PROVIDE_PROMPT', originalImage: imageDataUrl, error: null }));
   };
-  
+
+  const handlePromptChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = event.target.value;
+    setAppState(prev => ({ ...prev, prompt: value }));
+  };
+
   const handleSubmit = useCallback(async () => {
-    if (!appState.originalImage || !appState.prompt) {
-      setAppState(prev => ({...prev, error: "Please provide an image and a style prompt."}));
+    if (!appState.originalImage || !appState.prompt.trim()) {
+      setAppState(prev => ({ ...prev, error: 'Please provide an image and a style prompt.' }));
       return;
     }
 
     setAppState(prev => ({ ...prev, isLoading: true, error: null, step: 'GENERATING' }));
 
     try {
-      const mimeType = appState.originalImage.split(';')[0].split(':')[1];
+      const [metadataPart] = appState.originalImage.split(',');
+      const mimeType = metadataPart?.split(':')[1]?.split(';')[0] ?? 'image/jpeg';
       const base64Data = appState.originalImage.split(',')[1];
-      
+
       const result = await redesignRoomAndFindProducts(base64Data, mimeType, appState.prompt);
-      
+
       setAppState(prev => ({
         ...prev,
         redesignedImage: result.redesignedImage,
@@ -55,19 +58,23 @@ const App: React.FC = () => {
         isLoading: false,
         step: 'SHOW_RESULT',
       }));
-
     } catch (error) {
-      console.error("Error during redesign process:", error);
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      setAppState(prev => ({ ...prev, isLoading: false, error: `Failed to generate redesign. ${errorMessage}`, step: 'PROVIDE_PROMPT' }));
+      console.error('Error during redesign process:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+      setAppState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: `Failed to generate redesign. ${errorMessage}`,
+        step: 'PROVIDE_PROMPT',
+      }));
     }
   }, [appState.originalImage, appState.prompt]);
-  
+
   const handleStartOver = () => {
     setAppState({
       step: 'SELECT_MODE',
-      prompt: '',
       inputMode: undefined,
+      prompt: '',
       originalImage: null,
       redesignedImage: null,
       products: [],
@@ -82,53 +89,70 @@ const App: React.FC = () => {
       case 'SELECT_MODE':
         return <InputSelector onSelect={handleModeSelect} />;
       case 'PROVIDE_INPUT':
-        return appState.inputMode === 'upload' ? 
-          <FileUpload onImageReady={handleImageReady} /> : 
-          <LiveCapture onImageReady={handleImageReady} />;
+        return appState.inputMode === 'upload' ? (
+          <FileUpload onImageReady={handleImageReady} />
+        ) : (
+          <LiveCapture onImageReady={handleImageReady} />
+        );
       case 'PROVIDE_PROMPT':
         return (
-          <div className="w-full max-w-2xl mx-auto flex flex-col items-center">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Your Room</h2>
-            <img src={appState.originalImage!} alt="Your room" className="rounded-lg shadow-lg mb-6 w-full max-w-md object-contain" />
+          <div className="prompt-step">
+            <h2 className="section-title">Your Room</h2>
+            {appState.originalImage && (
+              <img
+                src={appState.originalImage}
+                alt="Your room"
+                className="prompt-step__preview"
+              />
+            )}
+            <label className="prompt-step__label" htmlFor="style-prompt">
+              Tell us how you want the room to feel
+            </label>
             <textarea
+              id="style-prompt"
               value={appState.prompt}
               onChange={handlePromptChange}
-              placeholder="e.g., 'Make it modern minimalist with oak wood and neutral colors' or 'Give me a cozy, rustic farmhouse vibe.'"
-              className="w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 ease-in-out dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
+              placeholder="e.g. Make it modern minimalist with warm woods and neutral fabrics"
+              className="prompt-step__textarea"
               rows={4}
             />
             <button
               onClick={handleSubmit}
-              disabled={!appState.prompt.trim()}
-              className="mt-6 w-full flex justify-center items-center gap-2 bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed transition-colors duration-300"
+              disabled={!appState.prompt.trim() || appState.isLoading}
+              className="primary-button"
             >
-              Redesign My Room!
+              Redesign my room
             </button>
-             {appState.error && <p className="text-red-500 mt-4 text-center">{appState.error}</p>}
+            {appState.error && <p className="error-message">{appState.error}</p>}
           </div>
         );
       case 'GENERATING':
-        return <Loader />;
+        return <Loader label="Creating your new room" />;
       case 'SHOW_RESULT':
+        if (!appState.originalImage || !appState.redesignedImage) {
+          return <p className="error-message">We could not display the result.</p>;
+        }
         return (
           <ResultDisplay
-            originalImage={appState.originalImage!}
-            redesignedImage={appState.redesignedImage!}
+            originalImage={appState.originalImage}
+            redesignedImage={appState.redesignedImage}
             products={appState.products}
             estimatedDimensions={appState.estimatedDimensions}
             onStartOver={handleStartOver}
           />
         );
       default:
-        return <p className="text-white">Something went wrong.</p>;
+        return <p className="error-message">Something went wrong.</p>;
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex flex-col">
+    <div className="app">
       <Header />
-      <main className="flex-grow flex items-center justify-center p-4 md:p-8">
-        {renderContent()}
+      <main className="app__main">
+        <div className="app__content">
+          {appState.isLoading && appState.step === 'GENERATING' ? <Loader label="Creating your new room" /> : renderContent()}
+        </div>
       </main>
     </div>
   );

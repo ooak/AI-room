@@ -1,0 +1,26 @@
+.app-header {
+  background: linear-gradient(135deg, #5b7fff, #7f5af0);
+  color: #ffffff;
+  padding: 2.5rem 1rem;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(54, 83, 255, 0.25);
+}
+
+.app-header__content {
+  margin: 0 auto;
+  max-width: 900px;
+}
+
+.app-header__title {
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  margin-bottom: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.app-header__subtitle {
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  line-height: 1.6;
+  margin: 0;
+  opacity: 0.9;
+}

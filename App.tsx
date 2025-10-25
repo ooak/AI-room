@@ -1,13 +1,12 @@
 import React, { useState, useCallback } from 'react';
-import { Header } from './components/Header';
-import { InputSelector } from './components/InputSelector';
-import { FileUpload } from './components/FileUpload';
-import { LiveCapture } from './components/LiveCapture';
-import { ResultDisplay } from './components/ResultDisplay';
-import { Loader } from './components/Loader';
-import { redesignRoomAndFindProducts } from './services/geminiService';
-import type { AppState, InputMode, Product } from './types';
-import { CameraIcon, UploadIcon } from './components/IconComponents';
+import { Header } from './components/Header.tsx';
+import { InputSelector } from './components/InputSelector.tsx';
+import { FileUpload } from './components/FileUpload.tsx';
+import { LiveCapture } from './components/LiveCapture.tsx';
+import { ResultDisplay } from './components/ResultDisplay.tsx';
+import { Loader } from './components/Loader.tsx';
+import { redesignRoomAndFindProducts } from './services/geminiService.ts';
+import type { AppState, InputMode } from './types.ts';
 
 const App: React.FC = () => {
   const [appState, setAppState] = useState<AppState>({
@@ -34,8 +33,8 @@ const App: React.FC = () => {
   };
   
   const handleSubmit = useCallback(async () => {
-    if (!appState.originalImage || !appState.prompt) {
-      setAppState(prev => ({...prev, error: "Please provide an image and a style prompt."}));
+    if (!appState.originalImage || !appState.prompt.trim()) {
+      setAppState(prev => ({ ...prev, error: 'Please provide an image and a style prompt.' }));
       return;
     }
 
@@ -57,9 +56,14 @@ const App: React.FC = () => {
       }));
 
     } catch (error) {
-      console.error("Error during redesign process:", error);
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      setAppState(prev => ({ ...prev, isLoading: false, error: `Failed to generate redesign. ${errorMessage}`, step: 'PROVIDE_PROMPT' }));
+      console.error('Error during redesign process:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+      setAppState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: `Failed to generate redesign. ${errorMessage}`,
+        step: 'PROVIDE_PROMPT',
+      }));
     }
   }, [appState.originalImage, appState.prompt]);
   
@@ -104,7 +108,7 @@ const App: React.FC = () => {
             >
               Redesign My Room!
             </button>
-             {appState.error && <p className="text-red-500 mt-4 text-center">{appState.error}</p>}
+            {appState.error && <p className="text-red-500 mt-4 text-center">{appState.error}</p>}
           </div>
         );
       case 'GENERATING':
